@@ -4,16 +4,20 @@ import com.rabbitmq.client.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.TimeoutException;
 
 public class Consumer {
     private static final String EXCHANGE_NAME = "IT-blog";
+    private static Map<String, String> mapOfConsumers;
 
     private static Connection connection;
     private static Channel channel;
 
     public static void main(String[] args) throws IOException, TimeoutException {
+        mapOfConsumers = new HashMap<>();
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
 
@@ -50,12 +54,22 @@ public class Consumer {
     private static void queueChannelBind(String queueName, String routingKey) throws IOException {
         if (channel != null) {
             channel.queueBind(queueName, EXCHANGE_NAME, routingKey);
-            DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-                String message = new String(delivery.getBody(), StandardCharsets.UTF_8);
-                System.out.println("Received: '" + delivery.getEnvelope().getRoutingKey() + "':'" + message + "'");
-            };
 
-            channel.basicConsume(queueName, true, deliverCallback, consumerTag -> {
+            channel.basicConsume(queueName, false, new DefaultConsumer(channel) {
+                @Override
+                public void handleCancel(String consumerTag) throws IOException {
+                    super.handleCancel(consumerTag);
+                }
+
+                @Override
+                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                    String routingKey = envelope.getRoutingKey();
+                    String contentType = properties.getContentType();
+                    long deliveryTag = envelope.getDeliveryTag();
+                    System.out.println(routingKey + " :: "+ new String(body, StandardCharsets.UTF_8));
+                    //some operations
+                    channel.basicAck(deliveryTag, false);
+                }
             });
         }
     }
