@@ -47,7 +47,6 @@ public class Consumer {
                 System.out.println("Invalid command. The command must have two arguments\nExample, subscribe php\nunsubscribe php");
             }
         }
-        // TODO: создать set очередей, чтобы вывести в консоль все связанные очереди для их отвязывания.
 
     }
 
@@ -59,6 +58,11 @@ public class Consumer {
                 @Override
                 public void handleCancel(String consumerTag) throws IOException {
                     super.handleCancel(consumerTag);
+                }
+
+                @Override
+                public void handleShutdownSignal(String consumerTag, ShutdownSignalException sig) {
+                    super.handleShutdownSignal(consumerTag, sig);
                 }
 
                 @Override
@@ -76,6 +80,7 @@ public class Consumer {
 
     private static void queueChannelUnbind(String queueName, String routingKey) throws IOException {
         if (channel != null) {
+
             channel.queueUnbind(queueName, EXCHANGE_NAME, routingKey);
         }
     }
